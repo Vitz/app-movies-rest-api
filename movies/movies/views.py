@@ -59,14 +59,16 @@ class MoviesView(viewsets.ModelViewSet):
         if tags_param:
             print("param tag:", tags_param)
             tags = []
+            tags_set = []
             for tag_param in tags_param:
-                tags += Tags.objects.filter(tag = tag_param)
-            print("items (sume of two)", len(tags)) # TODO should be intersection
-
-            id_list = []
-            for tag in tags:
-                id_list.append(tag.movie_id.movie_id)
-            queryset_tags = Movies.objects.filter(movie_id__in= id_list)
+                tags = set(Tags.objects.filter(tag = tag_param))
+                id_list_tmp = []
+                for tag in tags:
+                    id_list_tmp.append(tag.movie_id.movie_id)
+                tags_set.append(frozenset(id_list_tmp))
+            # id_list = list(dict.fromkeys(id_list)) #remove duplicates
+            tags_ids = set(tags_set[0]).intersection(*tags_set[:1])
+            queryset_tags = Movies.objects.filter(movie_id__in= tags_ids)
         else:
             queryset_tags = Movies.objects.all()
 
