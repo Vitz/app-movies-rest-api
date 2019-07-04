@@ -2,28 +2,88 @@ import csv
 import os
 from pathlib import Path
 
+import django_filters
 import pandas as pandas
+import re
 import requests
 from django.db.backends import sqlite3
+from django.db.models import QuerySet
 from django.shortcuts import  render
-from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, generics
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.utils import json
 from rest_framework.views import APIView
 from .models import Links, Movies, Ratings,Tags
-from .serializers import MoviesSerializer, LinksSerializer, RatingsSerializer, TagsSerializer
+from .serializers import MoviesSerializer, LinksSerializer, RatingsSerializer, TagsSerializer, MoviesDetailsSerializer
 import zipfile
 import shutil
 from django.db import connections
-from imdb import IMDb
+
+
 class MoviesView(viewsets.ModelViewSet):
-    queryset = Movies.objects.all()
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
     serializer_class = MoviesSerializer
+
+    # def include_tag(self, tags_str, tags_param):
+    #     def intersection(lst1, lst2):
+    #         temp = set(lst2)
+    #         lst3 = [value for value in lst1 if value in temp]
+    #         return lst3
+    #     print(str(tags_str))
+    #     tags_list = tags_str.split("|")
+    #     if isinstance(str, tags_param):
+    #         if tags_str in tags_list:
+    #             return True
+    #         else:
+    #             return False
+    #     if isinstance(list, tags_param):
+    #         inter = intersection(tags_param, tags_list)
+    #         if len(inter) > len(tags_param):
+    #             return True
+    #         else:
+    #             return False
+
+
+    def get_queryset(self):
+        year_param = self.request.query_params.get('year', None)
+        sort_param = self.request.query_params.get('sort', None)
+        tags_param = self.request.query_params.getlist('tag', None)
+        # print("all",  self.request.query_params.)
+        if year_param:
+            print("param year:", year_param)
+            queryset_year = Movies.objects.filter(year=year_param)
+        else:
+            queryset_year = Movies.objects.all()
+        if tags_param:
+            print("param tag:", tags_param)
+            tags = []
+            for tag_param in tags_param:
+                tags += Tags.objects.filter(tag = tag_param)
+            print("items (sume of two)", len(tags)) # TODO should be intersection
+
+            id_list = []
+            for tag in tags:
+                id_list.append(tag.movie_id.movie_id)
+            queryset_tags = Movies.objects.filter(movie_id__in= id_list)
+        else:
+            queryset_tags = Movies.objects.all()
+
+        queryset = queryset_year & queryset_tags # merge
+        if queryset is None:
+            queryset = Movies.objects.all()
+
+        if sort_param: # sort must be the last param, when queryset is finished
+            queryset = queryset.order_by(sort_param)
+        return queryset
+
 
 
 class LinksView(viewsets.ModelViewSet):
     queryset = Links.objects.all()
     serializer_class = LinksSerializer
+
 
 class RatingsView(viewsets.ModelViewSet):
     queryset = Ratings.objects.all()
@@ -33,6 +93,29 @@ class RatingsView(viewsets.ModelViewSet):
 class TagsView(viewsets.ModelViewSet):
     queryset = Tags.objects.all()
     serializer_class = TagsSerializer
+
+
+class MovieView(APIView):
+    #GET /movie/<movieId>/ - wybrany film
+    # {"title": "Tytul", "score": 5.1, 'genres’: [Comedy], 'link’: 'link do imdb’, 'year’: 2001}
+    def get(self, request, movie_id):
+        movie = Movies.objects.filter(movie_id=movie_id)[0]
+        rating = Ratings.objects.filter(movie_id=movie.movie_id)[0]
+        link = Links.objects.filter(movie_id=movie.movie_id)[0]
+        serializer_movie = MoviesSerializer(movie)
+        serializer_rating = RatingsSerializer(rating)
+        serializer_link = LinksSerializer(link)
+
+        dict_result = {}
+        dict_result["title"] = serializer_movie.data["title"]
+        dict_result["score"] = serializer_rating.data["rating"]
+        dict_result["genres"] = serializer_movie.data["genres"]
+        dict_result["link"] = "https://www.imdb.com/title/tt0"+str(serializer_link.data["imdb_id"])
+        dict_result["year"] = str(serializer_movie.data["year"])
+
+        return Response(dict_result)
+
+
 
 class DBView(APIView):
 
@@ -44,126 +127,138 @@ class DBView(APIView):
             norm_name += letter.lower()
         return norm_name
 
+    def year_from_title(self, title):
+        year = None
+        pattern = re.compile("[(][0-9][0-9][0-9][0-9][)]")
+        pattern_only_num = re.compile("[0-9][0-9][0-9][0-9]")
+        if title and pattern.search(title):
+            print(pattern.search(title).string)
+            try:
+                # only_nums = ''.join(x for x in title if x.isdigit())
+                # title_len = len(only_nums)
+                # year_str = only_nums[title_len-4:title_len]
+                year_str = pattern_only_num.search(pattern.search(title).string)
+                year = int(year_str.group(0))
+            except:
+                print("Pattern (yyyy) found, but yyyy not")
+        return year
+
+    def unzip_db(self):
+        # Delete old files, unpack zip
+        path_unzip = "media/unzip"
+        path = "media/ml-latest-small.zip"
+        if os.path.exists(path_unzip):
+            shutil.rmtree(path_unzip)
+        os.mkdir(path_unzip)
+        print("Dir prepared")
+        zip_ref = zipfile.ZipFile(path, 'r')
+        zip_ref.extractall(path_unzip)
+        zip_ref.close()
+        print("DB unzipped")
+
+    def download_db(self):
+        # Download and replace ml-latest-small.zip if file already exists
+        url = "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
+        path = "media/ml-latest-small.zip"
+        chunk = 2048
+        req = requests.get(url, stream=True)
+        if req.status_code == 200:
+            with open(path + "new", 'wb') as f:
+                for chunk in req.iter_content(chunk):
+                    f.write(chunk)
+                f.close()
+        if os.path.exists(path + "new"):
+            if os.path.exists(path):
+                os.remove(path)
+                print("Old zip removed")
+            os.rename(path + "new", path)
+        print("DB downloaded")
+
+    def load_movies(self, conn):
+        entity_name = "movies_movies"
+        path_csv = "media/unzip/ml-latest-small/movies.csv"
+        print("Now deleting:", entity_name)
+        self.delete_entity(entity_name, conn)
+        print("Now intesring:", entity_name)
+        with open(path_csv, encoding="utf8") as csv_file:
+            csv_file.seek(0)
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header = next(csv_reader)
+            for row in csv_reader:
+                print(row)
+                new_movie = Movies()
+                new_movie.movie_id = int(row[0])
+                new_movie.title = row[1]
+                new_movie.genres = row[2]
+                new_movie.year = self.year_from_title(row[1])
+                print(new_movie)
+                new_movie.save()
+
+    def load_links(self, conn):
+        entity_name = "movies_links"
+        path_csv = "media/unzip/ml-latest-small/links.csv"
+        print("Now deleting:", entity_name)
+        self.delete_entity(entity_name, conn)
+        with open(path_csv, encoding="utf8") as csv_file:
+            csv_file.seek(0)
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header = next(csv_reader)
+            for row in csv_reader:
+                print(row[0], row[1], row[2] )
+                new_link = Links()
+                new_link.movie_id = Movies.objects.get(movie_id=int(row[0]))
+                new_link.imdb_id = row[1]
+                if not row[2]:
+                    row[2] = None
+                new_link.tmdb_id = row[2]
+                new_link.save()
+
+    def load_tags(self, conn):
+        entity_name = "movies_tags"
+        path_csv = "media/unzip/ml-latest-small/tags.csv"
+        print("Now deleting:", entity_name)
+        self.delete_entity(entity_name, conn)
+        with open(path_csv, encoding="utf8") as csv_file:
+            csv_file.seek(0)
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header = next(csv_reader)
+            for row in csv_reader:
+                print(row[0], row[1], row[2], row[3])
+                new_tag = Tags()
+                new_tag.user_id = row[0]
+                new_tag.movie_id = Movies.objects.get(movie_id=int(row[1]))
+                new_tag.tag = row[2]
+                new_tag.timestamp = row[3]
+                new_tag.save()
+
+    def load_ratings(self, conn):
+        entity_name = "movies_ratings"
+        path_csv = "media/unzip/ml-latest-small/ratings.csv"
+        print("Now deleting:", entity_name)
+        self.delete_entity(entity_name, conn)
+        with open(path_csv, encoding="utf8") as csv_file:
+            csv_file.seek(0)
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            header = next(csv_reader)
+            for row in csv_reader:
+                print(row[0], row[1], row[2], row[3])
+                new_tag = Ratings()
+                new_tag.user_id = row[0]
+                new_tag.movie_id = Movies.objects.get(movie_id=int(row[1]))
+                new_tag.rating = row[2]
+                new_tag.timestamp = row[3]
+                new_tag.save()
+
     def post(self, request, format=None):
         if request.body and json.loads(request.body) == {"source": "ml-latest-small"}:
-            url = "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
-            path = "media/ml-latest-small.zip"
-            path_data_tsv = "media/tsv"
-            dir_name = "ml-latest-small"
-            path_unzip = "media/unzip"
-            chunk = 2048
-
             try:
-                # Download and replace ml-latest-small.zip if file already exists
-                req = requests.get(url, stream=True)
-                if req.status_code == 200:
-                    with open(path+"new", 'wb') as f:
-                        for chunk in req.iter_content(chunk):
-                            f.write(chunk)
-                        f.close()
-                if os.path.exists(path+"new"):
-                    if os.path.exists(path):
-                        os.remove(path)
-                        print("Old zip removed")
-                    os.rename(path+"new", path)
-                print("DB downloaded")
-
-                # Delete old files, unpack zip
-                if os.path.exists(path_unzip):
-                    shutil.rmtree(path_unzip)
-                os.mkdir(path_unzip)
-                print("Dir prepared")
-                zip_ref = zipfile.ZipFile(path, 'r')
-                zip_ref.extractall(path_unzip)
-                zip_ref.close()
-                print("DB unzipped")
-
-
-                # Load years_dataset
-                dataset = {}
-                with open(path_data_tsv + "/" +'data.txt', encoding="utf8") as txtfile:
-                    txtfile.seek(0)
-                    reader = csv.reader(txtfile)
-                    for row in reader:
-                        dataset[row[0]] = row[1]
-                print("example:", dataset["0000739"])
-                txtfile.close()
-
-                csv_to_edit = path_unzip + "/" + dir_name + "/links.csv"
-                os.rename(csv_to_edit, csv_to_edit+"in")
-                csv_out = open(csv_to_edit, 'w', encoding="utf8", newline='')
-                writer = csv.writer(csv_out)
-
-                try:
-                    with open(csv_to_edit+"in", encoding="utf8") as csv_file:
-                        csv_file.seek(0)
-                        csv_reader = csv.reader(csv_file, delimiter=',')
-                        skip_header = next(csv_reader)
-                        skip_header.append("year")
-                        print(skip_header)
-                        writer.writerow([skip_header[0], skip_header[1], skip_header[2], skip_header[3]])
-                        for row in csv_reader:
-                            try:
-                                writer.writerow([row[0], row[1], row[2], dataset[row[1]]])
-                                # if row[0] == 11 or row[0] == "60":
-                                #     break
-                            except:
-                                writer.writerow([row[0], row[1], row[2], 0])
-
-                        csv_file.close()
-                    csv_out.close()
-                    dataset = {}
-                except Exception as e:
-                    print(e)
-                    print("Nie załadowano links")
-
-                # Prepare DB and its settings
                 conn = connections['default']
-
-                # Load CSV files to DB, camelCase into _
-                dir_with_files = path_unzip + "/" + dir_name
-                file_list = os.listdir(dir_with_files)
-                for file in file_list:
-                    if str(file).endswith(".csv"): # and str(file) == "movies.csv":
-                        entity_name = "movies_" + file.replace(".csv", "")
-                        print("Now deleting:", entity_name)
-                        conn.cursor().execute("delete from " + entity_name)
-                        conn.cursor().execute("PRAGMA foreign_keys = OFF")
-                        file_path = dir_with_files + "/" + file
-                        print("Now adding:", entity_name)
-                        with open(file_path, encoding="utf8") as csv_file:
-                            csv_file.seek(0)
-                            csv_reader = csv.reader(csv_file, delimiter=',')
-                            header = next(csv_reader)
-                            print("header:", header)
-                            norm_header= []
-                            for item in header:
-                                norm_header.append(self.norm(item))
-
-                            sql_request_prefix = "INSERT INTO " + entity_name + " ( id, "+ " , ".join(norm_header).rstrip() + ") VALUES("
-                            #sql_request_prefix = "INSERT INTO " + entity_name + " VALUES("
-                            sql_request_postfix = ")"
-                            row_iterator = 0
-                            for row in csv_reader:
-                                items_as_values = "NULL"                                                   ","
-                                for i in range(len(row)):
-                                    row[i] = row[i].replace("'","''")
-                                    if type(row[i]) == type(1):
-                                        items_as_values = items_as_values + row[i] + ","
-                                    elif type(row[i]) == type("str"):
-                                        items_as_values = items_as_values + "'" + row[i] + "',"
-                                    else:
-                                        raise("Input type is not suported yet")
-                                items_as_values = items_as_values.rstrip(',')
-                                sql_request = sql_request_prefix+items_as_values+sql_request_postfix
-
-                                print(sql_request)
-                                conn.cursor().execute(sql_request)
-                                row_iterator = row_iterator + 1
-                                # if row_iterator > 100:
-                                #     break
-
-
+                self.download_db()
+                self.unzip_db()
+                self.load_movies(conn)
+                self.load_links(conn)
+                self.load_tags(conn)
+                self.load_ratings(conn)
                 status = "OK"
             except Exception as e:
                 print(e)
@@ -173,11 +268,9 @@ class DBView(APIView):
             status = "Wrong request"
         return Response({"Status": status})
 
-
-
-
-
-
-
+    def delete_entity(self, entity_name, conn):
+        conn.cursor().execute("PRAGMA foreign_keys = OFF;")
+        conn.cursor().execute("delete from " + entity_name)
+        conn.cursor().execute("PRAGMA foreign_keys = ON;")
 
 
