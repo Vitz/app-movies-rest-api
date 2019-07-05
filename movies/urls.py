@@ -2,5 +2,5 @@
 from django.urls import include, path
 
 urlpatterns = [
-    path('', include('movies.movies.urls')),
+    path('/api/', include('movies.movies.urls')),
 ]
