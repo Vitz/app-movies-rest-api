@@ -26,39 +26,15 @@ class MoviesView(viewsets.ModelViewSet):
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
     serializer_class = MoviesSerializer
 
-    # def include_tag(self, tags_str, tags_param):
-    #     def intersection(lst1, lst2):
-    #         temp = set(lst2)
-    #         lst3 = [value for value in lst1 if value in temp]
-    #         return lst3
-    #     print(str(tags_str))
-    #     tags_list = tags_str.split("|")
-    #     if isinstance(str, tags_param):
-    #         if tags_str in tags_list:
-    #             return True
-    #         else:
-    #             return False
-    #     if isinstance(list, tags_param):
-    #         inter = intersection(tags_param, tags_list)
-    #         if len(inter) > len(tags_param):
-    #             return True
-    #         else:
-    #             return False
-
-
     def get_queryset(self):
         year_param = self.request.query_params.get('year', None)
         sort_param = self.request.query_params.get('sort', None)
         tags_param = self.request.query_params.getlist('tag', None)
-        # print("all",  self.request.query_params.)
         if year_param:
-            print("param year:", year_param)
             queryset_year = Movies.objects.filter(year=year_param)
         else:
             queryset_year = Movies.objects.all()
         if tags_param:
-            print("param tag:", tags_param)
-            tags = []
             tags_set = []
             for tag_param in tags_param:
                 tags = set(Tags.objects.filter(tag = tag_param))
@@ -66,7 +42,6 @@ class MoviesView(viewsets.ModelViewSet):
                 for tag in tags:
                     id_list_tmp.append(tag.movie_id.movie_id)
                 tags_set.append(frozenset(id_list_tmp))
-            # id_list = list(dict.fromkeys(id_list)) #remove duplicates
             tags_ids = set(tags_set[0]).intersection(*tags_set[:1])
             queryset_tags = Movies.objects.filter(movie_id__in= tags_ids)
         else:
@@ -79,7 +54,6 @@ class MoviesView(viewsets.ModelViewSet):
         if sort_param: # sort must be the last param, when queryset is finished
             queryset = queryset.order_by(sort_param)
         return queryset
-
 
 
 class LinksView(viewsets.ModelViewSet):
@@ -98,8 +72,6 @@ class TagsView(viewsets.ModelViewSet):
 
 
 class MovieView(APIView):
-    #GET /movie/<movieId>/ - wybrany film
-    # {"title": "Tytul", "score": 5.1, 'genres’: [Comedy], 'link’: 'link do imdb’, 'year’: 2001}
     def get(self, request, movie_id):
         movie = Movies.objects.filter(movie_id=movie_id)[0]
         rating = Ratings.objects.filter(movie_id=movie.movie_id)[0]
@@ -107,16 +79,13 @@ class MovieView(APIView):
         serializer_movie = MoviesSerializer(movie)
         serializer_rating = RatingsSerializer(rating)
         serializer_link = LinksSerializer(link)
-
         dict_result = {}
         dict_result["title"] = serializer_movie.data["title"]
         dict_result["score"] = serializer_rating.data["rating"]
         dict_result["genres"] = serializer_movie.data["genres"]
         dict_result["link"] = "https://www.imdb.com/title/tt0"+str(serializer_link.data["imdb_id"])
         dict_result["year"] = str(serializer_movie.data["year"])
-
         return Response(dict_result)
-
 
 
 class DBView(APIView):
