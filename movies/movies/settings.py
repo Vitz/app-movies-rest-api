@@ -32,7 +32,6 @@ ALLOWED_HOSTS = ['django-rest-api-imdb.herokuapp.com']
 
 INSTALLED_APPS = [
     'movies',
-    'tagging',
     'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
