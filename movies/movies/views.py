@@ -108,7 +108,7 @@ class DBView(APIView):
                 # only_nums = ''.join(x for x in title if x.isdigit())
                 # title_len = len(only_nums)
                 # year_str = only_nums[title_len-4:title_len]
-                year_str = pattern_only_num.search(pattern.search(title).string)
+                year_str = pattern_only_num.search(pattern.search(title).group(0))
                 year = int(year_str.group(0))
             except:
                 print("Pattern (yyyy) found, but yyyy not")
@@ -224,12 +224,12 @@ class DBView(APIView):
         if request.body and json.loads(request.body) == {"source": "ml-latest-small"}:
             try:
                 conn = connections['default']
-                self.download_db()
-                self.unzip_db()
+                # self.download_db()
+                # self.unzip_db()
                 self.load_movies(conn)
-                self.load_links(conn)
-                self.load_tags(conn)
-                self.load_ratings(conn)
+                # self.load_links(conn)
+                # self.load_tags(conn)
+                # self.load_ratings(conn)
                 status = "OK"
             except Exception as e:
                 print(e)
