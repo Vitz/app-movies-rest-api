@@ -42,7 +42,7 @@ class MoviesView(viewsets.ModelViewSet):
                 for tag in tags:
                     id_list_tmp.append(tag.movie_id.movie_id)
                 tags_set.append(frozenset(id_list_tmp))
-            tags_ids = set(tags_set[0]).intersection(*tags_set[:1])
+            tags_ids = set(tags_set[0]).intersection(*tags_set[1:])
             queryset_tags = Movies.objects.filter(movie_id__in= tags_ids)
         else:
             queryset_tags = Movies.objects.all()

@@ -25,7 +25,7 @@ SECRET_KEY = '9$0ofu3d)hvdkpog9t4*50sj6vls*z+**updvu2c2!2q6-mz)n'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['django-rest-api-imdb.herokuapp.com']
+ALLOWED_HOSTS = ['django-rest-api-imdb.herokuapp.com', '127.0.0.1' ]
 
 
 # Application definition
