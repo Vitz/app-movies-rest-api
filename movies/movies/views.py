@@ -9,6 +9,7 @@ import requests
 from django.db.backends import sqlite3
 from django.db.models import QuerySet
 from django.shortcuts import  render
+from django.views.generic import TemplateView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics
 from rest_framework.renderers import JSONRenderer
@@ -21,6 +22,9 @@ import zipfile
 import shutil
 from django.db import connections
 
+
+class HomeRender(TemplateView):
+    template_name = "index.html"
 
 class MoviesView(viewsets.ModelViewSet):
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import MoviesView
+from .views import MoviesView, HomeRender
 from . import views
 
 router = routers.DefaultRouter()
@@ -18,4 +18,6 @@ urlpatterns = [
     # path('movie/<int:movie_id>/', views.movie_by_id, name="movie_by_id"),
     path('movie/<movie_id>/', views.MovieView.as_view(), name="movie_by_id"),
     # path('movie/<movie_id>/', views.MovieView.as_view(), name="movie_by_id"),
+    path('home/', HomeRender.as_view()),
+
 ]
