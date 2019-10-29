@@ -6,6 +6,7 @@ import django_filters
 import pandas as pandas
 import re
 import requests
+from django.core import serializers
 from django.db.backends import sqlite3
 from django.db.models import QuerySet
 from django.shortcuts import  render
@@ -30,6 +31,11 @@ class MoviesView(viewsets.ModelViewSet):
         year_param = self.request.query_params.get('year', None)
         sort_param = self.request.query_params.get('sort', None)
         tags_param = self.request.query_params.getlist('tag', None)
+        genres_param = self.request.query_params.get('genre', None)
+        if genres_param:
+            queryset_genre = Movies.objects.filter(genres__icontains = genres_param)
+        else: 
+            queryset_genre = Movies.objects.all()
         if year_param:
             queryset_year = Movies.objects.filter(year=year_param)
         else:
@@ -47,12 +53,13 @@ class MoviesView(viewsets.ModelViewSet):
         else:
             queryset_tags = Movies.objects.all()
 
-        queryset = queryset_year & queryset_tags # merge
+        queryset = queryset_year & queryset_tags & queryset_genre # merge
         if queryset is None:
             queryset = Movies.objects.all()
 
         if sort_param: # sort must be the last param, when queryset is finished
             queryset = queryset.order_by(sort_param)
+            
         return queryset
 
 
@@ -88,8 +95,9 @@ class MovieView(APIView):
         return Response(dict_result)
 
 
-class DBView(APIView):
 
+
+class DBView(APIView):
     def norm(self, name):
         norm_name = ""
         for letter in name:
@@ -104,10 +112,7 @@ class DBView(APIView):
         pattern_only_num = re.compile("[0-9][0-9][0-9][0-9]")
         if title and pattern.search(title):
             print(pattern.search(title).string)
-            try:
-                # only_nums = ''.join(x for x in title if x.isdigit())
-                # title_len = len(only_nums)
-                # year_str = only_nums[title_len-4:title_len]
+            try: 
                 year_str = pattern_only_num.search(pattern.search(title).string)
                 year = int(year_str.group(0))
             except:
