@@ -23,7 +23,7 @@ Sortowanie za pomocą parametrów:
 http://django-rest-api-imdb.herokuapp.com/movies/?sort=year 
 
 Wybór za pomocą parametrów:  
-http://django-rest-api-imdb.herokuapp.com/movies/?year=2000  
+http://django-rest-api-imdb.herokuapp.com/movies/?year=2000&genre=Comedy  
 
 Filmy za pomocą listy tagów:  
 http://django-rest-api-imdb.herokuapp.com/movies/?tag=funny&tag=animation   
