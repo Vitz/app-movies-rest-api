@@ -8,7 +8,7 @@ class Movies(models.Model):
     genres = models.CharField(max_length=100)
     year = models.IntegerField(null=True)
     #img = models.ImageField(_(""), upload_to=None, height_field=None, width_field=None, max_length=None)
-    rating_avg = models.FloatField(default=0,null=True)
+    rating_avg = models.DecimalField(default=0,null=True, max_digits=3, decimal_places=2)
     rating_amount = models.IntegerField(default=0,null=True)
 
 

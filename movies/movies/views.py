@@ -2,6 +2,7 @@ import csv
 import os
 from pathlib import Path
 
+from django.db.models import Avg
 import django_filters
 import pandas as pandas
 import re
@@ -93,7 +94,7 @@ class MovieView(APIView):
         dict_result["genres"] = serializer_movie.data["genres"]
         dict_result["link"] = "https://www.imdb.com/title/tt0"+str(serializer_link.data["imdb_id"])
         dict_result["year"] = str(serializer_movie.data["year"])
-        dict_result["rating_avg"] = str(serializer_movie.data["rating_amount"])
+        dict_result["rating_avg"] = str(serializer_movie.data["rating_avg"])
         dict_result["rating_amount"] = str(serializer_movie.data["rating_amount"])
         return Response(dict_result)
 
@@ -227,38 +228,56 @@ class DBView(APIView):
                 new_tag.save()
 
     def post(self, request, format=None):
-        if request.body and json.loads(request.body) == {"source": "ml-latest-small"}:
+        try:
+            json_valided = json.loads(request.body)
+        except:
+            return Response({"Status": "json not valid"})
+
+        if request.body and json_valided == {"source": "ml-latest-small"}:
+            status = "Status init"
             try:
                 conn = connections['default']
-                self.download_db()
-                self.unzip_db()
+                # self.download_db()
+                # self.unzip_db()
                 self.load_movies(conn)
-                self.load_links(conn)
-                self.load_tags(conn)
-                self.load_ratings(conn)
+                # self.load_links(conn)
+                # self.load_tags(conn)
+                # self.load_ratings(conn)
                 status = "OK"
             except Exception as e:
                 print(e)
                 print("Unable to reload DB")
                 status = "Fail"
-        elif request.body and json.loads(request.body) == {"reset": "rating"}:            
-            self.add_ratings2movies()    
+        elif request.body and json_valided == {"reset": "rating"}:            
+            status = self.add_ratings2movies()  
+            #status = "Ratings reseted"
         else:
             status = "Wrong request"
         return Response({"Status": status})
 
     def add_ratings2movies(self):
         movies = Movies.objects.all()
+        iter = 1
+        movies_len = len(movies)
         for movie in movies:
+            iter += 1
             try:
                 ratings = Ratings.objects.filter(movie_id = movie.movie_id)
-                movie.rating_avg =  ratings.aggregate(Avg('rating'))
+                movie.rating_avg = list(ratings.aggregate(Avg('rating')).values())[0]
                 movie.rating_amount =  len(ratings)
                 movie.save()
-            except:
-                movie.rating_avg =  0.0
+            except Exception as e:
+                movie.rating_avg =  float(0.0)
                 movie.rating_amount =  0
-                movie.save()            
+                movie.save()
+                return str(e) + str(list(ratings.aggregate(Avg('rating')).values())[0]["dict_values"])
+            print(str(iter) , "/" , str(movies_len))
+        return "ok"
+
+        
+
+        
+            
 
 
     def delete_entity(self, entity_name, conn):
