@@ -97,6 +97,7 @@ class MovieView(APIView):
         dict_result["rating_amount"] = str(serializer_movie.data["rating_amount"])
         return Response(dict_result)
 
+
 class DBView(APIView):
     def norm(self, name):
         norm_name = ""
@@ -247,7 +248,7 @@ class DBView(APIView):
         return Response({"Status": status})
 
     def add_ratings2movies(self):
-        movies = Movies.models.all()
+        movies = Movies.objects.all()
         for movie in movies:
             try:
                 ratings = Ratings.objects.filter(movie_id = movie.movie_id)
