@@ -6,8 +6,8 @@ class MoviesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movies
         queryset = Movies.objects.all()
-        fields = ('movie_id', 'title', 'genres', 'year')
-        #fields = '__all__'
+        #fields = ('movie_id', 'title', 'genres', 'year', 'rating_avg', 'rating_amount')
+        fields = '__all__'
 
 
 

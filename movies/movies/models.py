@@ -7,6 +7,10 @@ class Movies(models.Model):
     title = models.CharField(max_length=100)
     genres = models.CharField(max_length=100)
     year = models.IntegerField(null=True)
+    #img = models.ImageField(_(""), upload_to=None, height_field=None, width_field=None, max_length=None)
+    rating_avg = models.FloatField(default=0,null=True)
+    rating_amount = models.IntegerField(default=0,null=True)
+
 
 class Links(models.Model):
     movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE, db_column="movie_id")

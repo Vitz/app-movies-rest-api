@@ -87,15 +87,15 @@ class MovieView(APIView):
         serializer_rating = RatingsSerializer(rating)
         serializer_link = LinksSerializer(link)
         dict_result = {}
+
         dict_result["title"] = serializer_movie.data["title"]
         dict_result["score"] = serializer_rating.data["rating"]
         dict_result["genres"] = serializer_movie.data["genres"]
         dict_result["link"] = "https://www.imdb.com/title/tt0"+str(serializer_link.data["imdb_id"])
         dict_result["year"] = str(serializer_movie.data["year"])
+        dict_result["rating_avg"] = str(serializer_movie.data["rating_amount"])
+        dict_result["rating_amount"] = str(serializer_movie.data["rating_amount"])
         return Response(dict_result)
-
-
-
 
 class DBView(APIView):
     def norm(self, name):
@@ -240,9 +240,25 @@ class DBView(APIView):
                 print(e)
                 print("Unable to reload DB")
                 status = "Fail"
+        elif request.body and json.loads(request.body) == {"reset": "rating"}:            
+            self.add_ratings2movies()    
         else:
             status = "Wrong request"
         return Response({"Status": status})
+
+    def add_ratings2movies(self):
+        movies = Movies.models.all()
+        for movie in movies:
+            try:
+                ratings = Ratings.objects.filter(movie_id = movie.movie_id)
+                movie.rating_avg =  ratings.aggregate(Avg('rating'))
+                movie.rating_amount =  len(ratings)
+                movie.save()
+            except:
+                movie.rating_avg =  0.0
+                movie.rating_amount =  0
+                movie.save()            
+
 
     def delete_entity(self, entity_name, conn):
         conn.cursor().execute("PRAGMA foreign_keys = OFF;")
