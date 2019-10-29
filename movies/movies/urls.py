@@ -15,7 +15,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(router.urls)),
     path('db/', views.DBView.as_view(), name="db"),
-    # path('movie/<int:movie_id>/', views.movie_by_id, name="movie_by_id"),
     path('movie/<movie_id>/', views.MovieView.as_view(), name="movie_by_id"),
-    # path('movie/<movie_id>/', views.MovieView.as_view(), name="movie_by_id"),
 ]
