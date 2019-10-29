@@ -25,13 +25,14 @@ SECRET_KEY = '9$0ofu3d)hvdkpog9t4*50sj6vls*z+**updvu2c2!2q6-mz)n'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['django-rest-api-imdb.herokuapp.com', '127.0.0.1' ]
+ALLOWED_HOSTS = ['django-rest-api-imdb.herokuapp.com', '127.0.0.1' , '*' ] #temporary
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'movies',
+    'corsheaders',
     'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -49,6 +50,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'movies.urls'
@@ -136,3 +139,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 100
 }
+
+# CORS HEADER https://github.com/adamchainz/django-cors-headers#configuration
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    '*',
+]
+CORS_ORIGIN_REGEX_WHITELIST = [
+    'http://localhost:3030',
+    '*',
+
+]
