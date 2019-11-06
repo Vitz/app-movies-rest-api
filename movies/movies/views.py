@@ -115,7 +115,7 @@ class DBView(APIView):
         if title and pattern.search(title):
             print(pattern.search(title).string)
             try: 
-                year_str = pattern_only_num.search(pattern.search(title).string)
+                year_str = pattern_only_num.search((pattern.search(title).group(0)))
                 year = int(year_str.group(0))
             except:
                 print("Pattern (yyyy) found, but yyyy not")
@@ -275,10 +275,6 @@ class DBView(APIView):
         return "ok"
 
         
-
-        
-            
-
 
     def delete_entity(self, entity_name, conn):
         conn.cursor().execute("PRAGMA foreign_keys = OFF;")
