@@ -1,14 +1,14 @@
 # app-movies-rest-api
   
-Zadanie rekturacyjne Junior Python Developer.  
+Zadanie rekturacyjne Junior Python Developer (rozwinięte na potrzeby własne).  
 
-Technologie: 
+Technologie:   
 -Python                  3.6.4,  
 -Django                  2.0.3,  
 -django-bootstrap3       10.0.1,  
 -django-filter           2.1.0,  
 -django-heroku           0.3.1,  
--django-rest-api         0.1.5.  
+-django-rest-api         0.1.5.
 
 
 Lista filmów:  
@@ -30,3 +30,4 @@ http://django-rest-api-imdb.herokuapp.com/movies/?tag=funny&tag=animation
 
 Czyszczenie i ponowne wgranie DB (na HEROKU raczej nie zadziała):  
 POST http://django-rest-api-imdb.herokuapp.com/db z body {"source": "ml-latest-small"}  
+
