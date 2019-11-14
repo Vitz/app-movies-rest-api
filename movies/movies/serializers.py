@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import Links, Movies, Ratings,Tags
+from .models import Links, Movies, Ratings,Tags,Seasons
+
+
+class SeasonsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Seasons
+        queryset = Seasons.objects.all()
+        fields = '__all__'
 
 
 class MoviesSerializer(serializers.ModelSerializer):

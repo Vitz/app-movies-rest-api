@@ -2,26 +2,43 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class Movies(models.Model):
+
+
+class SeasonsGroups(models.Model): #eg. "Mr. Robot"
+    title = models.CharField(max_length=150)
+
+
+class Seasons(models.Model): #eg. "Season 1"
+    title = models.CharField(max_length=100)
+    group =  models.ForeignKey(SeasonsGroups, on_delete=models.CASCADE, db_column="group", null=True)
+
+
+class Movies(models.Model): #in series just an eposode
     movie_id = models.IntegerField(primary_key=True) # the name can be different
     title = models.CharField(max_length=100)
     genres = models.CharField(max_length=100)
     year = models.IntegerField(null=True)
-    img = models.ImageField(upload_to='media/covers/', height_field=None, width_field=None, max_length=None, default = 'media/covers/no-img.png')
+    # img = models.ImageField(upload_to='media/covers/', height_field=None, width_field=None, max_length=None, default = 'media/covers/no-img.png', null=True)
+    img_url = models.CharField(max_length=500 ,null=True)
     rating_avg = models.DecimalField(default=0,null=True, max_digits=3, decimal_places=2)
     rating_amount = models.IntegerField(default=0,null=True)
-
+    season =  models.ForeignKey(Seasons, on_delete=models.CASCADE, db_column="season", null=True)
 
 class Links(models.Model):
-    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE, db_column="movie_id")
+    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE)
     imdb_id = models.IntegerField()
     tmdb_id = models.IntegerField(null=True)
 
+    
+class VideoLinks(models.Model):
+    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE)
+    vid_link = models.CharField(max_length=500)
 
 
 class Ratings(models.Model):
     user_id = models.IntegerField()
-    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE, db_column="movie_id")
+    external_origin = models.BooleanField(default=True)
+    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE)
     RATINGS = [
         ('1', '1'),
         ('2', '2'),
@@ -34,11 +51,9 @@ class Ratings(models.Model):
 
 class Tags(models.Model):
     user_id = models.IntegerField()
-    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE, db_column="movie_id")
+    movie_id = models.ForeignKey(Movies, on_delete=models.CASCADE)
     tag = models.CharField(max_length=100)
     timestamp = models.IntegerField()
-
-
 
 
 
