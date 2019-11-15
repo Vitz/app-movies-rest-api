@@ -32,6 +32,14 @@ class MoviesView(generics.ListAPIView):
     filterset_fields = '__all__'   
     ordering_fields = '__all__' 
 
+    def get_queryset(self):
+        genres_param = self.request.query_params.get('genre', None)
+        if genres_param:
+            queryset_genre = Movies.objects.filter(genres__icontains = genres_param)
+        else: 
+            queryset_genre = Movies.objects.all()
+        return queryset_genre
+
     # def get_queryset(self):
     #     year_param = self.request.query_params.get('year', None)
     #     sort_param = self.request.query_params.get('sort', None)
