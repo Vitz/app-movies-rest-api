@@ -1,13 +1,10 @@
 # app-movies-rest-api
   
-Zadanie rekturacyjne Junior Python Developer (rozwinięte na potrzeby własne).  
+Backend dla bazy filmow. 
 
 Technologie:   
 -Python                  3.6.4,  
 -Django                  2.0.3,  
--django-bootstrap3       10.0.1,  
--django-filter           2.1.0,  
--django-heroku           0.3.1,  
 -django-rest-api         0.1.5.
 
 
