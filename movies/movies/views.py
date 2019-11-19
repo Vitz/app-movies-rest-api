@@ -85,15 +85,19 @@ class LinksView(viewsets.ModelViewSet):
     serializer_class = LinksSerializer
 
 
+
+
 class RatingsView(viewsets.ModelViewSet):
     queryset = Ratings.objects.all()
     serializer_class = RatingsSerializer
 
 
-class TagsView(viewsets.ModelViewSet):
+class TagsView(generics.ListAPIView):
     queryset = Tags.objects.all()
-    serializer_class = TagsSerializer
-
+    serializer_class = TagsSerializer    
+    filter_backends = (DjangoFilterBackend, OrderingFilter,)
+    filterset_fields = '__all__'   
+    ordering_fields = '__all__' 
 
 class MovieView(APIView):
     def get(self, request, movie_id):
