@@ -18,7 +18,7 @@ gunicorn==19.9.0
 heroku==0.1.4
 idna==2.7
 integer==1.0.3
-lxml==4.3.4
+lxml==4.6.2
 numpy==1.16.4
 pandas==0.24.2
 pipenv==2018.7.1
